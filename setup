@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# The purpose of this script is to provide a single script that can be used to run either packagesetup or configsetup scripts or both
+
+# TODO: add a solution for the script to require invoking with sudo privilege 
+
+currentdir=$(pwd)
+
+helpmessage=" OPTIONS:
+  -i    Run the packagesetup install script
+  -c    Run the configsetup script
+  -h    Print the help menu"
+
+while getopts ":ich" opt; do
+  case "${opt}" in
+    i)
+      $currentdir/packagesetup
+      ;;
+    c)
+      $currentdir/configsetup
+      ;;
+    h)
+      echo "$helpmessage"
+      ;;
+    *)
+      err:" No such option -$OPTARG "
+      echo "Try 'setup -h' for a list of options."
+      exit 1
+      ;;
+  esac
+done
+
+# Check if positional paramater was provided by checking whether the length of the first positional parameter is equal to zero
+# If no option was passed into the script, let the user know
+if [[ -z $1 ]]; then
+  echo "An option must be provided.
+  Try 'setup -h' for a list of options."
+fi
