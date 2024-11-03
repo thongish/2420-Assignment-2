@@ -1,9 +1,15 @@
 #!/bin/bash
 
-# The purpose of this script is to clone a repository with existing configuration files and then create symbolic links from the repository to their intended locations
+# The purpose of this script is to clone a repository with existing configuration files and create symbolic links from the repository files to their intended locations
 
+# Check if git is installed on the system
+if [[ -e /bin/git ]]; then
 # Clone existing configuration files from https://gitlab.com/cit2420/2420-as2-starting-filesin a directory called config_files
-git clone https://gitlab.com/cit2420/2420-as2-starting-files ~/config_files 
+  git clone https://gitlab.com/cit2420/2420-as2-starting-files ~/config_files 
+else 
+  err": You need to install git to run this script"
+  exit 1
+fi
 
 # Get a list of full paths to directories in the cloned repository, excluding hidden directories
 directories=$(find ~/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
