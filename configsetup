@@ -3,8 +3,7 @@
 # The purpose of this script is to clone a repository with existing configuration files and then create symbolic links from the repository to their intended locations
 
 # Clone existing configuration files from https://gitlab.com/cit2420/2420-as2-starting-filesin a directory called config_files
-# If git not installed, send an error and exit code 1
-git clone https://gitlab.com/cit2420/2420-as2-starting-files ~/config_files || echo "You either don't have git installed or the repository has been made private or deleted" ; exit 1
+git clone https://gitlab.com/cit2420/2420-as2-starting-files ~/config_files 
 
 # Get a list of full paths to directories in the cloned repository, excluding hidden directories
 directories=$(find ~/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
