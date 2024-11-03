@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# The purpose of this script is to install packages on a new system
+
+# You can add or remove packages you want this script to install in this indexed array
+packages=(kakoune tmux)
+
+# This variable is used to append each package you want to install which will then be called at the end of the script
+install="pacman -S"
+
+# This for loop appends each package in the packages variable into the install variable string
+for package in ${packages[@]}; do
+  install+=" ${package}"
+ # echo $install
+done
+
+# This line just calls the install variable which runs the "pacman -S ... " command that was built in the loop above
+$install
+
+
