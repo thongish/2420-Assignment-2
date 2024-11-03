@@ -1,0 +1,168 @@
+#!/bin/bash
+
+# The purpose of this script is to create a new user on the system.
+
+# TODO: add a solution for the script to require invoking with sudo privilege 
+# TODO: change heredoc write files to passwd and group
+# TODO: add something to append username to a group line in /etc/group
+
+# NOTE: When should I be using functions? 
+# Function to copy contents from /etc/skel to the new user's home directory
+# copy_skel() {
+#   mkdir /home/$1
+#   cp -r /etc/skel/* /home/$1 
+# }
+
+# Function to obtain the UID and or GID of last entry in a file
+# getID() {
+#   local arr=$(tail -n 1 /etc/passwd | grep -Eo [0-9]{4})
+  # local id_arr=()
+  # for i in $arr; do
+  #   id_arr+=("$i")
+  # done
+  # echo ${id_arr[0]}
+  # echo "${id_arr[@]}"
+# }
+
+# Function that checks if names are valid
+text_check() {
+# Regex found here - https://stackoverflow.com/questions/38377805/shell-script-to-check-for-string-and-special-characters 
+# NOTE: stackoverflow a valid resource?
+if [[ $1 == *['!'@#\$%^\&*()+=/\ ]* || -z $1 ]]; then
+  local func_result=1 
+else
+  local func_result=0
+fi
+echo "$func_result"
+}
+
+# Menu variable
+helpmessage="
+COMMAND STRUCTURE:
+  sudo createuser [option]... [username]
+
+OPTIONS:
+  -m    Create user home directory at /home/[username]
+  -s    Specify default shell for the user.
+        Example: /bin/bash
+  -g    Specify additional groups to add new user to.
+        Groups should be comma separated.
+        Example: audio,wheel,users
+  -h    Print the help menu
+
+EXAMPLE:
+  sudo createuser -m -s /bin/bash -g wheel,users my_user"
+
+# Check if command run without any positional parameters or options
+if [[ -z $1 ]]; then
+  echo "Try sudo ./createuser -h to learn more."
+  exit 1
+fi
+
+# Using getopts to handle script options
+while getopts ":s:g:h" opts; do
+  case $opts in 
+    # NOTE: Is this option necessary? the instructions don't really detail it
+    # m)
+    #   echo "option -m"
+    #   home_dir=true
+    #   ;;
+    s)
+      echo "option -s"
+      vars=$OPTARG
+      ;;
+    g)
+      echo "option -g"
+      # Check if -g argument is are valid group names by storing the result of text_check() in the variable group_check and then testing whether 0 or 1
+      group_check="$(text_check $OPTARG)"
+      if [[ $group_check == 0 ]]; then
+        # NOTE: I got this from the useradd docs do I need to cite it? 
+        # Storing the provided argument for -g, replacing commas with empty spaces with the power of variable expansion!
+        varg=(${OPTARG/,/ })
+      else
+        echo "Invalid group names or syntax
+Try 'sudo createuser -h' for more information"        
+      fi
+      # echo ${varg[@]}
+      # echo ${varg[0]}
+      # echo ${varg[1]}
+      ;;
+    h)
+      echo "$helpmessage"
+      ;;
+    :)
+      echo "-$OPTARG requires an argument"
+      ;;
+    *)
+      echo "error"
+      ;;
+  esac
+done
+
+# Get rid of all getops options and arguments to allow the use of positional parameters
+shift $(($OPTIND -1))
+
+
+# Check if positional parameter is a valid username
+name_check="$(text_check $1)"
+if [[ ! $name_check == 0 ]]; then
+  echo "Missing or invalid username. Make sure there are no special characters in your username."
+  exit 1
+fi
+
+# Set first positional parameter as username
+username=$1
+# Create home directory full path
+homedir="/home/$username"
+echo $homedir
+
+# If shell was specified, use that shell, otherwise use the default /usr/bin/bash
+if [[ -z $vars ]]; then
+  shell="/usr/bin/bash"
+else
+  shell=$vars
+fi
+
+# Make home directory for the user and copy /etc/skel to it
+# mkdir /home/$1
+# cp -r /etc/skel/* /home/$1 
+
+# This line takes the last line of /etc/passwd and obtains just the UID and GID of that line
+# HACK: can I assume my system will never reach over 4 digits of users?
+ids=$(tail -n 1 /etc/passwd | grep -Eo [0-9]{4})
+id_arr=()
+
+# looping through the ids so and making an indexed array which I can then assign uid and gid variables
+for id in $ids; do
+  id_arr+=($id)
+done
+uid=${id_arr[0]}
+gid=${id_arr[1]}
+
+# Increment the uid and gid variables by 1
+((uid++))
+((gid++))
+
+# This string combines all user/group related variables into a valid /etc/passwd entry
+echo $username $uid $gid $homedir $shell
+# passwd_entry=$(printf '%s:x:%s:%s::%s:%s' "$username" "$uid" "$gid" "$homedir" "$shell")
+
+# Append user information into the /etc/passwd file
+cat >> ~/test_file <<- EOF
+$username:x:$uid:$gid::$homedir:$shell
+EOF
+echo "$password_entry"
+
+# Append user primary group into /etc/group file
+cat >> ~/test_file <<- EOF
+$username:x:$gid:
+EOF
+
+# Run the copy_skel function if $home_dir == true that was set in the -m case
+# if [[ $home_dir == true ]]; then
+#   mkdir /home/$1
+#   copy_skel $1 && echo "/etc/skel copied into /home/$1."
+# fi
+# echo $1
+# echo $vars
+# echo $home_dir
