@@ -6,6 +6,7 @@
 packages=(kakoune tmux)
 
 # This variable is used to append each package you want to install which will then be called at the end of the script
+# NOTE: Do you want us to change package managers based on the system distro?
 install="pacman -S"
 
 # This for loop appends each package in the packages variable into the install variable string
@@ -17,4 +18,4 @@ done
 # This line just calls the install variable which runs the "pacman -S ... " command that was built in the loop above
 $install
 
-
+# NOTE: Error handling necessary at all in this file?

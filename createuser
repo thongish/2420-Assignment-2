@@ -7,6 +7,7 @@
 # TODO: add something to append username to a group line in /etc/group
 
 # NOTE: When should I be using functions? 
+
 # Function to copy contents from /etc/skel to the new user's home directory
 # copy_skel() {
 #   mkdir /home/$1
@@ -63,6 +64,7 @@ fi
 while getopts ":s:g:h" opts; do
   case $opts in 
     # NOTE: Is this option necessary? the instructions don't really detail it
+     
     # m)
     #   echo "option -m"
     #   home_dir=true
@@ -76,8 +78,8 @@ while getopts ":s:g:h" opts; do
       # Check if -g argument is are valid group names by storing the result of text_check() in the variable group_check and then testing whether 0 or 1
       group_check="$(text_check $OPTARG)"
       if [[ $group_check == 0 ]]; then
-        # NOTE: I got this from the useradd docs do I need to cite it? 
         # Storing the provided argument for -g, replacing commas with empty spaces with the power of variable expansion!
+        # NOTE: I got this from the useradd docs do I need to cite it? 
         varg=(${OPTARG/,/ })
       else
         echo "Invalid group names or syntax

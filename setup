@@ -3,6 +3,8 @@
 # The purpose of this script is to provide a single script that can be used to run either packagesetup or configsetup scripts or both
 
 # TODO: add a solution for the script to require invoking with sudo privilege 
+# NOTE: Best solution I found online was to use 'sudo -E' and to check inside the script using $EUID. Was that what you were looking for? Is there a better solution?
+# My issue was that running sudo alone without any options changed the environment variables to the root user's
 
 currentdir=$(pwd)
 
@@ -14,7 +16,7 @@ helpmessage=" OPTIONS:
 while getopts ":ich" opt; do
   case "${opt}" in
     i)
-      $currentdir/packagesetup
+      $currentdir/packagesetup || echo "Try using 'sudo -E ./setup <option>'"
       ;;
     c)
       $currentdir/configsetup
@@ -34,5 +36,5 @@ done
 # If no option was passed into the script, let the user know
 if [[ -z $1 ]]; then
   echo "An option must be provided.
-  Try 'setup -h' for a list of options."
+Try 'setup -h' for a list of options."
 fi

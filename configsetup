@@ -2,6 +2,8 @@
 
 # The purpose of this script is to clone a repository with existing configuration files and create symbolic links from the repository files to their intended locations
 
+# TODO: Check if bin directory exists first, if not make it 
+
 # Check if git is installed on the system
 if [[ -e /bin/git ]]; then
 # Clone existing configuration files from https://gitlab.com/cit2420/2420-as2-starting-filesin a directory called config_files
@@ -12,14 +14,17 @@ else
 fi
 
 # Get a list of full paths to directories in the cloned repository, excluding hidden directories
+# NOTE: These find options were a mix of man page reading and stackoverflow readings and group mate findings from lab 6 or 7, how do I cite?
 directories=$(find ~/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
 
 # Iterate through the directories variable
 for path in ${directories[@]}; do
 
   # Use the find command on each full path in $directories to find subdirectories
+  # FIX: This for loop seems to be unnecessary
   for dir in $(find $path -maxdepth 0 -type d);do
     # Get the basename of each subdirectory found
+    # NOTE: These basename regex thingies were from the bash cheatsheet you gave us as a resource, how do I cite  it?
     base="${dir##*/}"
 
     # Check the basename against cases defined below
