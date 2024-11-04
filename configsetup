@@ -18,55 +18,51 @@ fi
 directories=$(find ~/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
 
 # Iterate through the directories variable
-for path in ${directories[@]}; do
+for dir in ${directories[@]}; do
 
-  # Use the find command on each full path in $directories to find subdirectories
-  # FIX: This for loop seems to be unnecessary
-  for dir in $(find $path -maxdepth 0 -type d);do
-    # Get the basename of each subdirectory found
-    # NOTE: These basename regex thingies were from the bash cheatsheet you gave us as a resource, how do I cite  it?
-    base="${dir##*/}"
+  # Get the basename of each subdirectory found
+  # NOTE: These basename regex thingies were from the bash cheatsheet you gave us as a resource, how do I cite it?
+  base="${dir##*/}"
 
-    # Check the basename against cases defined below
-    case "$base" in
+  # Check the basename against cases defined below
+  case "$base" in
 
-      # If basename == bin, iterate through the files and create symbolic links in ~/bin that point to the scripts in ~/config_files/bin directory
-      bin)
-        echo -e "\nbin:"
-        echo ---------------------------------
-        for script in $(find $dir -maxdepth 1 -mindepth 1 -type f); do
-          base="${script##*/}"
-          ln -s $script ~/bin && echo "Creating symbolic link for ${base}"
-        done
-        ;;
+    # If basename == bin, iterate through the files and create symbolic links in ~/bin that point to the scripts in ~/config_files/bin directory
+    bin)
+      echo -e "\n$base:"
+      echo ---------------------------------
+      for script in $(find $dir -maxdepth 1 -mindepth 1 -type f); do
+        base="${script##*/}"
+        ln -s $script ~/bin && echo "Creating symbolic link for ${base}"
+      done
+      ;;
 
-      # If basename == config, iterate through its subdirectories and create symbolic links in the ~/.config directory that point to the directories in ~/config_files/config directory 
-      config)
-        echo -e "\nconfig:"
-        echo ---------------------------------
-        for config_dir in $(find $dir -maxdepth 1 -mindepth 1 -type d); do
-          base="${config_dir##*/}"
-          ln -s $config_dir ~/.config && echo "Creating symbolic link for ${base}"
-        done
-        ;;
+    # If basename == config, iterate through its subdirectories and create symbolic links in the ~/.config directory that point to the directories in ~/config_files/config directory 
+    config)
+      echo -e "\n$base:"
+      echo ---------------------------------
+      for config_dir in $(find $dir -maxdepth 1 -mindepth 1 -type d); do
+        base="${config_dir##*/}"
+        ln -s $config_dir ~/.config && echo "Creating symbolic link for ${base}"
+      done
+      ;;
 
-      # If basename == home, iterate through the files and create symbolic links in the user's home directory that point to the files in ~/config_files/home directory
-      home)
-        echo -e "\nhome:"
-        echo ---------------------------------
-        for file in $(find $dir -maxdepth 1 -mindepth 1 -type f); do
-          base="${file##*/}"
-          ln -s $file ~/.$base && echo "Creating symbolic link for ${base}"
-        done
-        ;;
+    # If basename == home, iterate through the files and create symbolic links in the user's home directory that point to the files in ~/config_files/home directory
+    home)
+      echo -e "\n$base:"
+      echo ---------------------------------
+      for file in $(find $dir -maxdepth 1 -mindepth 1 -type f); do
+        base="${file##*/}"
+        ln -s $file ~/.$base && echo "Creating symbolic link for ${base}"
+      done
+      ;;
 
-      # If basename is not part of the defined case statements in this script, tell the user to edit the script
-      *)
-        echo -e "***\nNew directory in the repository since this script (configsetup) was last modified
+    # If basename is not part of the defined case statements in this script, tell the user to edit the script
+    *)
+      echo -e "***\nNew directory in the repository since this script (configsetup) was last modified
 Edit script to accomodate it\n***"
-        ;;
-    esac
-  done
+      ;;
+  esac
 done
 
 echo "Configuration file setup complete"
