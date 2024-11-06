@@ -5,7 +5,10 @@
 # TODO: add a solution for the script to require invoking with sudo privilege 
 # NOTE: Best solution I found online was to use 'sudo -E' and to check inside the script using $EUID. Was that what you were looking for? Is there a better solution?
 # My issue was that running sudo alone without any options changed the environment variables to the root user's
+# TODO: Come up with solution to take the current username of user that used the script for the configsetup. This should fix having to use sudo -E  
 
+
+# FIX: pwd is probably not going ot work here with sudo
 currentdir=$(pwd)
 
 helpmessage=" OPTIONS:

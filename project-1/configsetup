@@ -3,6 +3,10 @@
 # The purpose of this script is to clone a repository with existing configuration files and create symbolic links from the repository files to their intended locations
 
 # TODO: Check if bin directory exists first, if not make it 
+# TODO: in-depth commenting, for example `base=${dir##*/}` needs to be explained like what is basename and what does it look like at this point of the script 
+# Explain why I used certain options for the find command
+# TODO: Get rid of any ~ and use full paths
+# TODO: Possibly let the user specify where they want to clone the repository and have a default location as well
 
 # Check if git is installed on the system
 if [[ -e /bin/git ]]; then
@@ -14,14 +18,12 @@ else
 fi
 
 # Get a list of full paths to directories in the cloned repository, excluding hidden directories
-# NOTE: These find options were a mix of man page reading and stackoverflow readings and group mate findings from lab 6 or 7, how do I cite?
 directories=$(find ~/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
 
 # Iterate through the directories variable
 for dir in ${directories[@]}; do
 
   # Get the basename of each subdirectory found
-  # NOTE: These basename regex thingies were from the bash cheatsheet you gave us as a resource, how do I cite it?
   base="${dir##*/}"
 
   # Check the basename against cases defined below

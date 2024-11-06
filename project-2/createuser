@@ -64,6 +64,7 @@ fi
 while getopts ":s:g:h" opts; do
   case $opts in 
     # NOTE: Is this option necessary? the instructions don't really detail it
+    # It is necessary, fix this
      
     # m)
     #   echo "option -m"
@@ -131,6 +132,7 @@ fi
 
 # This line takes the last line of /etc/passwd and obtains just the UID and GID of that line
 # HACK: can I assume my system will never reach over 4 digits of users?
+# NOTE: Try to fix this using awk
 ids=$(tail -n 1 /etc/passwd | grep -Eo [0-9]{4})
 id_arr=()
 
