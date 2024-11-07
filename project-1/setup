@@ -2,11 +2,11 @@
 
 # The purpose of this script is to provide a single script that can be used to run either packagesetup or configsetup scripts or both
 
-# TODO: add a solution for the script to require invoking with sudo privilege 
-# NOTE: Best solution I found online was to use 'sudo -E' and to check inside the script using $EUID. Was that what you were looking for? Is there a better solution?
-# My issue was that running sudo alone without any options changed the environment variables to the root user's
-# TODO: Come up with solution to take the current username of user that used the script for the configsetup. This should fix having to use sudo -E  
-
+if [[ ! $EUID == 0 ]]; then
+  echo "You must run this script with sudo privilege.
+Try 'setup -h' for more information."
+  exit 1
+fi
 
 helpmessage="
 COMMAND STRUCTURE:
