@@ -8,40 +8,40 @@
 # TODO: Come up with solution to take the current username of user that used the script for the configsetup. This should fix having to use sudo -E  
 
 
-# FIX: pwd is probably not going ot work here with sudo
-currentdir=$(pwd)
-
-helpmessage=" OPTIONS:
-  -i    Run the packagesetup install script
-  -c    Run the configsetup script
-  -h    Print the help menu"
 helpmessage="
 COMMAND STRUCTURE:
-sudo setup [option(s)]... [username]
+sudo ./setup [option(s)]... [username]
 
 OPTIONS:
-  -i    Install packages
-  -c    Clone configuration file repository and create symbolic links
-  -h    Print the help menu
+  -i    Install packages.
+  -c    Clone configuration file repository and create symbolic links.
+        This option requires you provide a username.
+  -h    Print the help menu.
 
 EXAMPLE:
-  sudo -ic my_user
+  sudo ./setup -ic my_user
+  sudo ./setup -i
+  sudo ./setup -c my_user
 " 
 
-while getopts ":ich" opt; do
+while getopts ":ic:h" opt; do
   case "${opt}" in
     i)
-      $currentdir/packagesetup || echo "Try using 'sudo -E ./setup <option>'"
+      ./packagesetup || echo "Try using 'sudo ./setup -i"
       ;;
     c)
-      $currentdir/configsetup
+      ./configsetup $OPTARG
       ;;
     h)
       echo "$helpmessage"
       ;;
     *)
-      err:" No such option -$OPTARG "
-      echo "Try 'setup -h' for a list of options."
+      if [[ $OPTARG == "c" ]]; then
+        echo "-c option requires an argument: username. Try 'setup -h' for more information."
+      else
+        err:" No such option -$OPTARG "
+        echo "Try 'setup -h' for a list of options."
+      fi
       exit 1
       ;;
   esac
