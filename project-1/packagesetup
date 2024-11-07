@@ -2,10 +2,10 @@
 
 # The purpose of this script is to install packages on a new system
 
-# TODO: Refactor to include a separate plain text file instead of an indexed array inside here
+# TODO: in depth comments
 
 # You can add or remove packages you want this script to install in this indexed array
-packages=(kakoune tmux)
+packages=$(cat ./package-list)
 
 # This variable is used to append each package you want to install which will then be called at the end of the script
 install="pacman -S"
