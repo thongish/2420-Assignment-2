@@ -3,22 +3,21 @@
 # The purpose of this script is to clone a repository with existing configuration files and create symbolic links from the repository files to their intended locations
 
 # TODO: Check if bin directory exists first, if not make it 
-# TODO: in-depth commenting, for example `base=${dir##*/}` needs to be explained like what is basename and what does it look like at this point of the script 
+# NOTE: in-depth commenting, for example `base=${dir##*/}` needs to be explained like what is basename and what does it look like at this point of the script 
 # Explain why I used certain options for the find command
-# TODO: Get rid of any ~ and use full paths
-# TODO: Possibly let the user specify where they want to clone the repository and have a default location as well
+# TODO: redo comments
 
 # Check if git is installed on the system
 if [[ -e /bin/git ]]; then
 # Clone existing configuration files from https://gitlab.com/cit2420/2420-as2-starting-filesin a directory called config_files
-  git clone https://gitlab.com/cit2420/2420-as2-starting-files ~/config_files 
+  git clone https://gitlab.com/cit2420/2420-as2-starting-files /home/$1/config_files 
 else 
   err": You need to install git to run this script"
   exit 1
 fi
 
 # Get a list of full paths to directories in the cloned repository, excluding hidden directories
-directories=$(find ~/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
+directories=$(find /home/$1/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
 
 # Iterate through the directories variable
 for dir in ${directories[@]}; do
@@ -35,7 +34,7 @@ for dir in ${directories[@]}; do
       echo ---------------------------------
       for script in $(find $dir -maxdepth 1 -mindepth 1 -type f); do
         base="${script##*/}"
-        ln -s $script ~/bin && echo "Creating symbolic link for ${base}"
+        ln -s $script /home/$1/bin && echo "Creating symbolic link for ${base}"
       done
       ;;
 
@@ -45,7 +44,7 @@ for dir in ${directories[@]}; do
       echo ---------------------------------
       for config_dir in $(find $dir -maxdepth 1 -mindepth 1 -type d); do
         base="${config_dir##*/}"
-        ln -s $config_dir ~/.config && echo "Creating symbolic link for ${base}"
+        ln -s $config_dir /home/$1/.config && echo "Creating symbolic link for ${base}"
       done
       ;;
 
@@ -55,7 +54,7 @@ for dir in ${directories[@]}; do
       echo ---------------------------------
       for file in $(find $dir -maxdepth 1 -mindepth 1 -type f); do
         base="${file##*/}"
-        ln -s $file ~/.$base && echo "Creating symbolic link for ${base}"
+        ln -s $file /home/$1/.$base && echo "Creating symbolic link for ${base}"
       done
       ;;
 
