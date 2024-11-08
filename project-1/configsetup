@@ -6,6 +6,7 @@
 # NOTE: in-depth commenting, for example `base=${dir##*/}` needs to be explained like what is basename and what does it look like at this point of the script 
 # Explain why I used certain options for the find command
 # TODO: redo comments
+# TODO: maybe make a function to create the symbolic links
 
 # Check if git is installed on the system
 if [[ -e /bin/git ]]; then
