@@ -102,8 +102,8 @@ fi
 # Set first positional parameter as username
 username=$1
 # Create home directory full path
-homedir="/home/$username"
-echo $homedir
+# homedir="/home/$username"
+# echo $homedir
 
 # If shell was specified, use that shell, otherwise use the default /usr/bin/bash
 if [[ -z $vars ]]; then
@@ -116,26 +116,18 @@ fi
 # mkdir /home/$1
 # cp -r /etc/skel/* /home/$1 
 
-# This line takes the last line of /etc/passwd and obtains just the UID and GID of that line
-# HACK: can I assume my system will never reach over 4 digits of users?
-# NOTE: Try to fix this using awk
 # NOTE: tail -n 1 /etc/passwd | awk -F: '{ print $3/$4}' <-- will get uid/gid from /etc/passwd
-ids=$(tail -n 1 /etc/passwd | grep -Eo [0-9]{4})
-id_arr=()
-
-# looping through the ids so and making an indexed array which I can then assign uid and gid variables
-for id in $ids; do
-  id_arr+=($id)
-done
 
 # taking values from id_arr() and incrementing and storing in new variables
-uid=${id_arr[0]}
-gid=${id_arr[1]}
-
-# Increment the uid and gid variables by 1
+# This line takes the last line of /etc/passwd and obtains just the UID and GID of that line
+# This uses awk to get the 3rd and 4th inputs from a line in /etc/passwd and increments by 1
 # NOTE: tail -n 1 ~/test_file | awk -F: '{print ++$3}'
-((uid++))
-((gid++))
+# TODO: explain how awk works
+# https://man7.org/linux/man-pages/man1/awk.1p.html
+uid=$(tail -n 1 /etc/passwd | awk -F':' '{print ++$3}')
+gid=$(tail -n 1 /etc/passwd | awk -F':' '{print ++$4}')
+echo $uid
+echo $gid
 
 # This string combines all user/group related variables into a valid /etc/passwd entry
 echo $username $uid $gid $homedir $shell
@@ -158,6 +150,3 @@ EOF
 #   mkdir /home/$1
 #   copy_skel $1 && echo "/etc/skel copied into /home/$1."
 # fi
-# echo $1
-# echo $vars
-# echo $home_dir
