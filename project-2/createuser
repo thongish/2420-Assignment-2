@@ -8,27 +8,16 @@
 
 # NOTE: When should I be using functions? 
 
-# Function to copy contents from /etc/skel to the new user's home directory
-# copy_skel() {
-#   mkdir /home/$1
-#   cp -r /etc/skel/* /home/$1 
-# }
+if [[ ! $EUID == 0 ]]; then
+  echo "You must run this script with sudo privilege.
+Try 'sudo createuser -h' for more information."
+  exit 1
+fi
 
-# Function to obtain the UID and or GID of last entry in a file
-# getID() {
-#   local arr=$(tail -n 1 /etc/passwd | grep -Eo [0-9]{4})
-  # local id_arr=()
-  # for i in $arr; do
-  #   id_arr+=("$i")
-  # done
-  # echo ${id_arr[0]}
-  # echo "${id_arr[@]}"
-# }
 
 # Function that checks if names are valid
-text_check() {
+name_check() {
 # Regex found here - https://stackoverflow.com/questions/38377805/shell-script-to-check-for-string-and-special-characters 
-# NOTE: stackoverflow a valid resource?
 if [[ $1 == *['!'@#\$%^\&*()+=/\ ]* || -z $1 ]]; then
   local func_result=1 
 else
@@ -43,7 +32,7 @@ COMMAND STRUCTURE:
   sudo createuser [option]... [username]
 
 OPTIONS:
-  -m    Create user home directory at /home/[username]
+  -m    Create a user home directory at /home/[username]
   -s    Specify default shell for the user.
         Example: /bin/bash
   -g    Specify additional groups to add new user to.
@@ -52,63 +41,60 @@ OPTIONS:
   -h    Print the help menu
 
 EXAMPLE:
-  sudo createuser -m -s /bin/bash -g wheel,users my_user"
+  sudo createuser -m -s /bin/bash -g wheel,users my_user
+"
 
 # Check if command run without any positional parameters or options
 if [[ -z $1 ]]; then
-  echo "Try sudo ./createuser -h to learn more."
+  echo "You need to specify a username or options to run this script.
+Try sudo ./createuser -h to learn more."
   exit 1
 fi
 
 # Using getopts to handle script options
-while getopts ":s:g:h" opts; do
+while getopts ":ms:g:h" opts; do
   case $opts in 
-    # NOTE: Is this option necessary? the instructions don't really detail it
-    # It is necessary, fix this
-     
-    # m)
-    #   echo "option -m"
-    #   home_dir=true
-    #   ;;
+    m)
+      echo "option -m"
+      home_dir=true
+      ;;
     s)
       echo "option -s"
       vars=$OPTARG
       ;;
     g)
       echo "option -g"
-      # Check if -g argument is are valid group names by storing the result of text_check() in the variable group_check and then testing whether 0 or 1
-      group_check="$(text_check $OPTARG)"
+      # Check if -g argument is are valid group names by storing the result of name_check() in the variable group_check and then testing whether 0 or 1
+      group_check="$(name_check $OPTARG)"
       if [[ $group_check == 0 ]]; then
         # Storing the provided argument for -g, replacing commas with empty spaces with the power of variable expansion!
         # NOTE: I got this from the useradd docs do I need to cite it? 
         varg=(${OPTARG/,/ })
       else
         echo "Invalid group names or syntax
-Try 'sudo createuser -h' for more information"        
+Try 'sudo ./createuser -h' for more information"        
       fi
-      # echo ${varg[@]}
-      # echo ${varg[0]}
-      # echo ${varg[1]}
       ;;
     h)
       echo "$helpmessage"
       ;;
     :)
       echo "-$OPTARG requires an argument"
+      exit 1
       ;;
     *)
       echo "error"
+      exit 1
       ;;
   esac
 done
 
-# Get rid of all getops options and arguments to allow the use of positional parameters
+# Get rid of all getopts options and arguments to allow the use of positional parameters
 shift $(($OPTIND -1))
 
-
 # Check if positional parameter is a valid username
-name_check="$(text_check $1)"
-if [[ ! $name_check == 0 ]]; then
+checked_name="$(name_check $1)"
+if [[ ! $checked_name == 0 ]]; then
   echo "Missing or invalid username. Make sure there are no special characters in your username."
   exit 1
 fi
@@ -133,6 +119,7 @@ fi
 # This line takes the last line of /etc/passwd and obtains just the UID and GID of that line
 # HACK: can I assume my system will never reach over 4 digits of users?
 # NOTE: Try to fix this using awk
+# NOTE: tail -n 1 /etc/passwd | awk -F: '{ print $3/$4}' <-- will get uid/gid from /etc/passwd
 ids=$(tail -n 1 /etc/passwd | grep -Eo [0-9]{4})
 id_arr=()
 
@@ -140,10 +127,13 @@ id_arr=()
 for id in $ids; do
   id_arr+=($id)
 done
+
+# taking values from id_arr() and incrementing and storing in new variables
 uid=${id_arr[0]}
 gid=${id_arr[1]}
 
 # Increment the uid and gid variables by 1
+# NOTE: tail -n 1 ~/test_file | awk -F: '{print ++$3}'
 ((uid++))
 ((gid++))
 
@@ -152,15 +142,16 @@ echo $username $uid $gid $homedir $shell
 # passwd_entry=$(printf '%s:x:%s:%s::%s:%s' "$username" "$uid" "$gid" "$homedir" "$shell")
 
 # Append user information into the /etc/passwd file
-cat >> ~/test_file <<- EOF
+cat >> /home/arch/test_file <<- EOF
 $username:x:$uid:$gid::$homedir:$shell
 EOF
-echo "$password_entry"
+# echo "$password_entry"
 
-# Append user primary group into /etc/group file
-cat >> ~/test_file <<- EOF
+# Append user primary group into /etc/group file~
+cat >> /home/arch/test_file <<- EOF
 $username:x:$gid:
 EOF
+# NOTE: try awk '{print $0}' to append to line in /etc/group 
 
 # Run the copy_skel function if $home_dir == true that was set in the -m case
 # if [[ $home_dir == true ]]; then
