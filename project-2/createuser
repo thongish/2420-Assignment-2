@@ -2,9 +2,6 @@
 
 # The purpose of this script is to create a new user on the system.
 
-# TODO: Find a better way to get the latest UID/GID that was created
-# The way I do it is buggy
-
 # Checking if the environment variable EUID is not equal to 0, which is the root user's user ID (UID). If true, tell the user to use sudo
 # EUID stands for Effective User ID, it is essentially the user ID that will execute a process
 # When you run a command normally, the EUID will be equal to the UID of the user that executes the command
@@ -84,9 +81,19 @@ while getopts ":ms:g:h" opts; do
         # Replacement characters in a string were found on the bash cheatsheet
         # https://devhints.io/bash
         varg=(${OPTARG//,/ })
+
+        # Check if the groups exist in the /etc/group file
+        for group in ${varg[@]}; do
+          if [[ -z $(grep "$group:" /etc/group) ]]; then
+            echo "One or more groups specified do not exist on this system."
+            exit 1
+          fi
+        done
+
       else
         echo "ERROR: Invalid group names or syntax
 Try 'sudo ./createuser -h' for more information."
+        exit 1
       fi
       ;;
     h)
@@ -123,8 +130,14 @@ if [[ ! $checked_name == 0 ]]; then
   exit 1
 fi
 
-# Set first positional parameter as username
-username=$1
+# Check if username already exists in the system
+if [[ -z $(grep "$1:" /etc/passwd) ]]; then
+  # Set first positional parameter as username
+  username=$1
+else
+  echo "That username already exists. Choose a different username."
+  exit 1
+fi
 # Create home directory full path
 home_dir="/home/$username"
 
@@ -136,35 +149,41 @@ else
   shell=$vars
 fi
 
-# These next two lines use a combination of tail and awk to extract the UID and group ID (GID) from the last created user on the system
+# These next two lines use a combination of tail, awk, and sort to extract the UID and group ID (GID) from the last created user/group on the system
 # tail by default outputs the last 10 lines of a file - using the -n option let's us specify how many lines from the bottom of the file to output
 # awk is a tool that reads and manipulates plain text files - it separates lines of the file into "records" and each record is separated into "fields"
-# In this case, each record is an entry in the /etc/passwd file (a user in the system) and each field is the information about that user
+# In this case, each record is an entry in the /etc/passwd or /etc/group file (a user/group in the system) and each field is the information about that user/group
 # The -F':' option in the awk command tells awk to separate fields by the colon symbol 
 # We can extract information from each field by using the variables $1, $2, $3 ... - $1 being the first field, $2 second, and so on
-# awk can also perform operations on the text that it extracts such as the ++ and -- which increment or decrement a number
-# To sum it up, these next two lines take the last line of the /etc/passwd file and then extracts and increments the 3rd and 4th fields from the line and stores them in variables
+# awk can also perform operations on the text that it extracts such as ++ and -- which increment or decrement a number
+# awk can also utilize control statements such as if-else statements
+# sort is a command that sorts lines of a file or output - the -n option specifies a numeric sort
+# To sum it up, these next two lines read and output the 3rd field from each record in the /etc/passwd and /etc/group files as long as the 3rd field is less than 65534
+# That output is then sorted in ascending order and then piped into tail which outputs the highest ID number
 # https://man7.org/linux/man-pages/man1/tail.1.html
 # https://man7.org/linux/man-pages/man1/awk.1p.html
-uid=$(tail -n 1 /etc/passwd | awk -F':' '{print ++$3}')
-gid=$(tail -n 1 /etc/passwd | awk -F':' '{print ++$4}')
+# https://www.geeksforgeeks.org/awk-command-unixlinux-examples/
+# https://stackoverflow.com/questions/4065676/in-unix-user-having-the-highest-uid
+uid=$(awk -F':' '{if ($3 < 65534) print ++$3}' /etc/passwd | sort -n | tail -n 1)
+gid=$(awk -F':' '{if ($3 < 65534) print ++$3}' /etc/group | sort -n | tail -n 1)
 
-# Append user information into the /etc/passwd using heredocs
+# Append user information into the /etc/passwd file using heredocs
 cat >> /etc/passwd <<- EOF
 $username:x:$uid:$gid::$home_dir:$shell
 EOF
 echo "$password_entry"
 
-# Append user primary group into /etc/group using heredocs 
+# Append user primary group into /etc/group file using heredocs 
 cat >> /etc/group <<- EOF
 $username:x:$gid:
 EOF
 
-# Make the home directory if $make_home_dir variable == true, would be the case if the -m option was used
+# Make the home directory if $make_home_dir variable == true - would be the case if the -m option was used
 if [[ $make_home_dir == true ]]; then
   mkdir $home_dir 
   cp -r /etc/skel/* $home_dir && echo "/etc/skel copied into $home_dir."
   # Change owner and permissions of the new home directory
+  # the -R option tells the command to apply changes recursively
   chown -R $username:$username $home_dir
   chmod -R 700 $home_dir
 fi
@@ -174,7 +193,7 @@ for group in ${varg[@]}; do
   # This line uses command substitution to store the line in /etc/groups that matches one of the groups specified in -g
   group_line=$(grep "$group:" /etc/group)
   # Checking if there are any users already part of this group
-  # This is so I can separate users by a comma if there are users that belong to the group
+  # This is necessary to correctly format the way users are added to the group with commas
   # This is done by passing the output of the $group_line variable into awk and separating it into fields and extracting the 4th field which is where users that belong to the group are written
   # https://stackoverflow.com/questions/11245144/replace-whole-line-containing-a-string-using-sed
   if [[ -z $(echo $group_line | awk -F: '{print $4}') ]]; then
