@@ -2,12 +2,18 @@
 
 # The purpose of this script is to provide a single script that can be used to run either packagesetup or configsetup scripts or both
 
+# Checking if the environment variable EUID is not equal to 0, which is the root user's user ID (UID). If true, tell the user to use sudo
+# EUID stands for Effective User ID, it is essentially the user ID that will execute a process
+# When you run a command normally, the EUID will be equal to the UID of the user that executes the command
+# When you run a command with sudo, the EUID changes to 0 which means the process will be executed by the root user
+# https://askubuntu.com/questions/1279395/give-root-permissions-to-new-user
 if [[ ! $EUID == 0 ]]; then
-  echo "You must run this script with sudo privilege.
-Try 'setup -h' for more information."
+  echo "ERROR: You must run this script with sudo privilege.
+Try 'sudo ./setup -h' for more information."
   exit 1
 fi
 
+# Help message for when -h option used
 helpmessage="
 COMMAND STRUCTURE:
 sudo ./setup [option(s)]... [username]
@@ -24,32 +30,40 @@ EXAMPLE:
   sudo ./setup -c my_user
 " 
 
+# Check if positional paramater was provided by checking whether the length of the first positional parameter is equal to zero
+# If no option was passed into the script, let the user know
+if [[ -z $1 ]]; then
+  echo "ERROR: An option must be provided.
+Try 'setup -h' for a list of options."
+  exit 1
+fi
+
+# Using getopts to handle script options
 while getopts ":ic:h" opt; do
   case "${opt}" in
     i)
-      ./packagesetup || echo "Try using 'sudo ./setup -i"
+      # -i option runs the packagesetup script which installs packages based on a user defined package list stored in package-list plain text file
+      ./packagesetup
       ;;
     c)
+      # -c option runs the configsetup script along with a username argument which will then clone a config repository and set up symbolic links
       ./configsetup $OPTARG
       ;;
     h)
       echo "$helpmessage"
       ;;
+    :)
+      # This case is if an option that requires an argument doesn't receive any arguments
+      echo "ERROR: -$OPTARG option requires an argument: username.
+Try 'setup -h' for more information."
+      exit 1
+
+      ;;
     *)
-      if [[ $OPTARG == "c" ]]; then
-        echo "-c option requires an argument: username. Try 'setup -h' for more information."
-      else
-        err:" No such option -$OPTARG "
-        echo "Try 'setup -h' for a list of options."
-      fi
+      # This case is for if user used an option that doesn't exist in the case statements
+      echo "ERROR: No such option -$OPTARG.
+Try 'setup -h' for a list of options."
       exit 1
       ;;
   esac
 done
-
-# Check if positional paramater was provided by checking whether the length of the first positional parameter is equal to zero
-# If no option was passed into the script, let the user know
-if [[ -z $1 ]]; then
-  echo "An option must be provided.
-Try 'setup -h' for a list of options."
-fi
