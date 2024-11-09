@@ -181,7 +181,7 @@ EOF
 # Make the home directory if $make_home_dir variable == true - would be the case if the -m option was used
 if [[ $make_home_dir == true ]]; then
   mkdir $home_dir 
-  cp -r /etc/skel/* $home_dir && echo "/etc/skel copied into $home_dir."
+  cp -r /etc/skel/* $home_dir
   # Change owner and permissions of the new home directory
   # the -R option tells the command to apply changes recursively
   chown -R $username:$username $home_dir
@@ -195,14 +195,18 @@ for group in ${varg[@]}; do
   # Checking if there are any users already part of this group
   # This is necessary to correctly format the way users are added to the group with commas
   # This is done by passing the output of the $group_line variable into awk and separating it into fields and extracting the 4th field which is where users that belong to the group are written
+  # If the length of that is 0, then append the new user without a comma in front
   # https://stackoverflow.com/questions/11245144/replace-whole-line-containing-a-string-using-sed
   if [[ -z $(echo $group_line | awk -F: '{print $4}') ]]; then
-  # If the length of that is 0, then append the new user without a comma in front
+    # sed is a tool that can edit text from a file or output
+    # Using it here to replace matched patterns with the matched pattern + the new user username
+    # The -i option tells sed to edit the file in-place
+    # The structure is 'sed -i "/to be replaced/c string to be placed" file'
+    # The 'c' after the second forward slash is a sed command that means to replace the selected line with text
+    # https://linux.die.net/man/1/sed
     sed -i "/$group_line/c ${group_line}$username" /etc/group
-    echo "$group_line this is working"
   else
   # Otherwise, append the new user with a comma in front 
     sed -i "/$group_line/c ${group_line},$username" /etc/group
-    echo "$group_line this is working too"
   fi
 done
