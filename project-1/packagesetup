@@ -1,22 +1,9 @@
 #!/bin/bash
 
-# The purpose of this script is to install packages on a new system
+# The purpose of this script is to install packages from a user defined list on a new system
 
-# TODO: in depth comments
-
-# You can add or remove packages you want this script to install in this indexed array
+# Storing the contents of the package-list plain text file in a variable
 packages=$(cat ./package-list)
 
-# This variable is used to append each package you want to install which will then be called at the end of the script
-install="pacman -S"
-
-# This for loop appends each package in the packages variable into the install variable string
-for package in ${packages[@]}; do
-  install+=" ${package}"
- # echo $install
-done
-
-# This line just calls the install variable which runs the "pacman -S ... " command that was built in the loop above
-$install
-
-# NOTE: Error handling necessary at all in this file?
+# Run Arch Linux package manager along with the packages defined in the package-list plain text file
+pacman -S $packages
