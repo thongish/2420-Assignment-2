@@ -18,7 +18,7 @@ fi
 # Function that checks if names are valid
 name_check() {
 # Regex found here - https://stackoverflow.com/questions/38377805/shell-script-to-check-for-string-and-special-characters 
-if [[ $1 == *['!'@#\$%^\&*()+=/\ ]* || -z $1 ]]; then
+if [[ $1 == *['!'@#\$%^\&*(.)+=/\ ]* || -z $1 ]]; then
   local func_result=1 
 else
   local func_result=0
@@ -133,17 +133,36 @@ echo $gid
 echo $username $uid $gid $homedir $shell
 # passwd_entry=$(printf '%s:x:%s:%s::%s:%s' "$username" "$uid" "$gid" "$homedir" "$shell")
 
+echo ${varg[@]}
+
+# Loop through varg and append username to line
+# varg is a list of groups passed into -g option
+for group in ${varg[@]}; do
+  # storing the line that matches group in $varg
+  group_line=$(grep "$group:" /home/arch/test_file)
+  # Checking if there are any users already part of this group
+  # This is so I can sep by comma if there are
+  # I do this by checking the length of the 4th field of line sep by :
+  if [[ -z $(echo $group_line | awk -F: '{print $4}') ]]; then
+    sed -i "/$group_line/c ${group_line}$username" /home/arch/test_file
+    echo "$group_line this is working"
+  else
+    sed -i "/$group_line/c ${group_line},$username" /home/arch/test_file
+    echo "$group_line this is working too"
+  fi
+done
 # Append user information into the /etc/passwd file
-cat >> /home/arch/test_file <<- EOF
-$username:x:$uid:$gid::$homedir:$shell
-EOF
+# cat >> /home/arch/test_file <<- EOF
+# $username:x:$uid:$gid::$homedir:$shell
+# EOF
 # echo "$password_entry"
 
 # Append user primary group into /etc/group file~
-cat >> /home/arch/test_file <<- EOF
-$username:x:$gid:
-EOF
+# cat >> /home/arch/test_file <<- EOF
+# $username:x:$gid:
+# EOF
 # NOTE: try awk '{print $0}' to append to line in /etc/group 
+
 
 # Run the copy_skel function if $home_dir == true that was set in the -m case
 # if [[ $home_dir == true ]]; then
