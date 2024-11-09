@@ -2,34 +2,37 @@
 
 # The purpose of this script is to create a new user on the system.
 
-# TODO: add a solution for the script to require invoking with sudo privilege 
-# TODO: change heredoc write files to passwd and group
-# TODO: add something to append username to a group line in /etc/group
+# TODO: Find a better way to get the latest UID/GID that was created
+# The way I do it is buggy
 
-# NOTE: When should I be using functions? 
-
+# Checking if the environment variable EUID is not equal to 0, which is the root user's user ID (UID). If true, tell the user to use sudo
+# EUID stands for Effective User ID, it is essentially the user ID that will execute a process
+# When you run a command normally, the EUID will be equal to the UID of the user that executes the command
+# When you run a command with sudo, the EUID changes to 0 which means the process will be executed by the root user
+# https://askubuntu.com/questions/1279395/give-root-permissions-to-new-user
 if [[ ! $EUID == 0 ]]; then
-  echo "You must run this script with sudo privilege.
+  echo "ERROR: You must run this script with sudo privilege.
 Try 'sudo createuser -h' for more information."
   exit 1
 fi
 
-
 # Function that checks if names are valid
 name_check() {
-# Regex found here - https://stackoverflow.com/questions/38377805/shell-script-to-check-for-string-and-special-characters 
+# Check positional parameter $1 (should be username of the new user being made) if it contains any special characters or if length is 0 (doesn't exist)
+# Regex found here - https://stackoverflow.com/questions/26621736/how-to-check-if-a-string-contains-a-special-character
 if [[ $1 == *['!'@#\$%^\&*(.)+=/\ ]* || -z $1 ]]; then
   local func_result=1 
 else
   local func_result=0
 fi
+# Echoing so I can store 0 or 1 in a variable as a way to return 0 or 1 for this function
 echo "$func_result"
 }
 
-# Menu variable
+# Help menu variable
 helpmessage="
 COMMAND STRUCTURE:
-  sudo createuser [option]... [username]
+  sudo createuser [option(s)]... [username]
 
 OPTIONS:
   -m    Create a user home directory at /home/[username]
@@ -44,10 +47,10 @@ EXAMPLE:
   sudo createuser -m -s /bin/bash -g wheel,users my_user
 "
 
-# Check if command run without any positional parameters or options
+# Check if command run without any positional parameters or options by checking length of the first positional parameter
 if [[ -z $1 ]]; then
-  echo "You need to specify a username or options to run this script.
-Try sudo ./createuser -h to learn more."
+  echo "ERROR: You need to specify a username or options to run this script.
+Try 'sudo ./createuser -h' for more information."
   exit 1
 fi
 
@@ -55,41 +58,62 @@ fi
 while getopts ":ms:g:h" opts; do
   case $opts in 
     m)
-      echo "option -m"
-      home_dir=true
+      # -m option is used if the user wants the new user to have a home directory created
+      # Initializing this variable to use later to check if this variable is true - if true, create a home directory for the new user
+      make_home_dir=true
       ;;
     s)
-      echo "option -s"
+      # -s option lets the user specify their own default shell for the new user
+      # Storing the argument to -s option in a variable which is later used to set the default shell for the user
       vars=$OPTARG
+      # Check if the shell is installed on the system
+      if [[ ! -e $vars ]]; then
+        echo "ERROR: Shell entered does not exist."
+        exit 1
+      fi
       ;;
     g)
-      echo "option -g"
-      # Check if -g argument is are valid group names by storing the result of name_check() in the variable group_check and then testing whether 0 or 1
+      # -g option let's the user add the new user to one or more existing groups
+      # More than one group should have groups separated by commas such as "wheel,user,audio" - this is specified in the help
+      # Check if -g argument are valid group names by storing the result of name_check() in the variable group_check - this is the bash way to return a result from a function.
       group_check="$(name_check $OPTARG)"
+      # Checking if result returned from name_check is equal to 0
       if [[ $group_check == 0 ]]; then
-        # Storing the provided argument for -g, replacing commas with empty spaces with the power of variable expansion!
-        # NOTE: I got this from the useradd docs do I need to cite it? 
-        varg=(${OPTARG/,/ })
+        # Storing the provided argument for -g in a indexed array, replacing commas with empty spaces with the power of variable expansion!
+        # I found this solution to have the user specify multiple groups by separating them with commas in the useradd man page
+        # Replacement characters in a string were found on the bash cheatsheet
+        # https://devhints.io/bash
+        varg=(${OPTARG//,/ })
       else
-        echo "Invalid group names or syntax
-Try 'sudo ./createuser -h' for more information"        
+        echo "ERROR: Invalid group names or syntax
+Try 'sudo ./createuser -h' for more information."
       fi
       ;;
     h)
       echo "$helpmessage"
       ;;
     :)
-      echo "-$OPTARG requires an argument"
+      # This error is for if the user used an option that requires an argument without passing an argument
+      echo "ERROR: -$OPTARG requires an argument
+Try 'sudo ./createuser -h' for more information."
       exit 1
       ;;
     *)
-      echo "error"
+      # This error is for if the user used an option that doesn't exist
+      echo "ERROR: -$OPTARG is not a valid option.
+Try 'sudo ./createuser -h' for more information."
       exit 1
       ;;
   esac
 done
 
-# Get rid of all getopts options and arguments to allow the use of positional parameters
+# Get rid of all getopts options and arguments to allow the use of positional parameters 
+# OPTIND is a variable used by getopts that represents the next element to be processed in a command's positional parameters.
+# Starting at 1, every time an option or argument is processed, OPTIND is updated to be the next positional parameter's index.
+# So, essentially this line is shifting the count of all options and arguments, minus 1, to account for the positional paramater we want to use - in this case, the username of our new user
+# Shifting is moving positional parameters n times to the left
+# https://stackoverflow.com/questions/66764069/what-does-optind-do
+# https://linux.die.net/man/3/optind
 shift $(($OPTIND -1))
 
 # Check if positional parameter is a valid username
@@ -102,70 +126,64 @@ fi
 # Set first positional parameter as username
 username=$1
 # Create home directory full path
-# homedir="/home/$username"
-# echo $homedir
+home_dir="/home/$username"
 
 # If shell was specified, use that shell, otherwise use the default /usr/bin/bash
+# $vars is the shell path that was given as an argument to the -s getopts option
 if [[ -z $vars ]]; then
   shell="/usr/bin/bash"
 else
   shell=$vars
 fi
 
-# Make home directory for the user and copy /etc/skel to it
-# mkdir /home/$1
-# cp -r /etc/skel/* /home/$1 
-
-# NOTE: tail -n 1 /etc/passwd | awk -F: '{ print $3/$4}' <-- will get uid/gid from /etc/passwd
-
-# taking values from id_arr() and incrementing and storing in new variables
-# This line takes the last line of /etc/passwd and obtains just the UID and GID of that line
-# This uses awk to get the 3rd and 4th inputs from a line in /etc/passwd and increments by 1
-# NOTE: tail -n 1 ~/test_file | awk -F: '{print ++$3}'
-# TODO: explain how awk works
+# These next two lines use a combination of tail and awk to extract the UID and group ID (GID) from the last created user on the system
+# tail by default outputs the last 10 lines of a file - using the -n option let's us specify how many lines from the bottom of the file to output
+# awk is a tool that reads and manipulates plain text files - it separates lines of the file into "records" and each record is separated into "fields"
+# In this case, each record is an entry in the /etc/passwd file (a user in the system) and each field is the information about that user
+# The -F':' option in the awk command tells awk to separate fields by the colon symbol 
+# We can extract information from each field by using the variables $1, $2, $3 ... - $1 being the first field, $2 second, and so on
+# awk can also perform operations on the text that it extracts such as the ++ and -- which increment or decrement a number
+# To sum it up, these next two lines take the last line of the /etc/passwd file and then extracts and increments the 3rd and 4th fields from the line and stores them in variables
+# https://man7.org/linux/man-pages/man1/tail.1.html
 # https://man7.org/linux/man-pages/man1/awk.1p.html
 uid=$(tail -n 1 /etc/passwd | awk -F':' '{print ++$3}')
 gid=$(tail -n 1 /etc/passwd | awk -F':' '{print ++$4}')
-echo $uid
-echo $gid
 
-# This string combines all user/group related variables into a valid /etc/passwd entry
-echo $username $uid $gid $homedir $shell
-# passwd_entry=$(printf '%s:x:%s:%s::%s:%s' "$username" "$uid" "$gid" "$homedir" "$shell")
+# Append user information into the /etc/passwd using heredocs
+cat >> /etc/passwd <<- EOF
+$username:x:$uid:$gid::$home_dir:$shell
+EOF
+echo "$password_entry"
 
-echo ${varg[@]}
+# Append user primary group into /etc/group using heredocs 
+cat >> /etc/group <<- EOF
+$username:x:$gid:
+EOF
 
-# Loop through varg and append username to line
-# varg is a list of groups passed into -g option
+# Make the home directory if $make_home_dir variable == true, would be the case if the -m option was used
+if [[ $make_home_dir == true ]]; then
+  mkdir $home_dir 
+  cp -r /etc/skel/* $home_dir && echo "/etc/skel copied into $home_dir."
+  # Change owner and permissions of the new home directory
+  chown -R $username:$username $home_dir
+  chmod -R 700 $home_dir
+fi
+
+# Loop through list of groups passed into the -g option and add the new user to those groups
 for group in ${varg[@]}; do
-  # storing the line that matches group in $varg
-  group_line=$(grep "$group:" /home/arch/test_file)
+  # This line uses command substitution to store the line in /etc/groups that matches one of the groups specified in -g
+  group_line=$(grep "$group:" /etc/group)
   # Checking if there are any users already part of this group
-  # This is so I can sep by comma if there are
-  # I do this by checking the length of the 4th field of line sep by :
+  # This is so I can separate users by a comma if there are users that belong to the group
+  # This is done by passing the output of the $group_line variable into awk and separating it into fields and extracting the 4th field which is where users that belong to the group are written
+  # https://stackoverflow.com/questions/11245144/replace-whole-line-containing-a-string-using-sed
   if [[ -z $(echo $group_line | awk -F: '{print $4}') ]]; then
-    sed -i "/$group_line/c ${group_line}$username" /home/arch/test_file
+  # If the length of that is 0, then append the new user without a comma in front
+    sed -i "/$group_line/c ${group_line}$username" /etc/group
     echo "$group_line this is working"
   else
-    sed -i "/$group_line/c ${group_line},$username" /home/arch/test_file
+  # Otherwise, append the new user with a comma in front 
+    sed -i "/$group_line/c ${group_line},$username" /etc/group
     echo "$group_line this is working too"
   fi
 done
-# Append user information into the /etc/passwd file
-# cat >> /home/arch/test_file <<- EOF
-# $username:x:$uid:$gid::$homedir:$shell
-# EOF
-# echo "$password_entry"
-
-# Append user primary group into /etc/group file~
-# cat >> /home/arch/test_file <<- EOF
-# $username:x:$gid:
-# EOF
-# NOTE: try awk '{print $0}' to append to line in /etc/group 
-
-
-# Run the copy_skel function if $home_dir == true that was set in the -m case
-# if [[ $home_dir == true ]]; then
-#   mkdir /home/$1
-#   copy_skel $1 && echo "/etc/skel copied into /home/$1."
-# fi
