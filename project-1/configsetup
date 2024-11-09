@@ -2,18 +2,22 @@
 
 # The purpose of this script is to clone a repository with existing configuration files and create symbolic links from the repository files to their intended locations
 
+# Initialize a username variable for clarity
+# $1 will be the username that's passed into the -c option in the setup script or as a parameter when running this script alone
+username=$1
+
 # Function that echoes each config directory as a header in the output
 header() {
   # Using the -e option for echo allows echo to interpret backslash escapes
   # This let's me use `\n` to create a new line
-  echo -e "\n$1:"
+  echo -e "\n$username:"
   echo ----------------------------------------
 }
 
 # Check if git is installed on the system by checking if the git bin file exists
 if [[ -e /bin/git ]]; then
 # Clone existing configuration files from https://gitlab.com/cit2420/2420-as2-starting-filesin a directory called config_files in the user's home directory
-  git clone https://gitlab.com/cit2420/2420-as2-starting-files /home/$1/config_files 
+  git clone https://gitlab.com/cit2420/2420-as2-starting-files /home/$username/config_files 
 else 
   err": You need to install git to run this script."
   exit 1
@@ -28,7 +32,8 @@ fi
 # -path "*/.*" is the expression I'm giving to -not
 # -path matches based on patterns - In this case, "*/.*" will match any thing before and after '/.' 
 # https://askubuntu.com/questions/266179/how-to-exclude-ignore-hidden-files-and-directories-in-a-wildcard-embedded-find
-directories=$(find /home/$1/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
+# https://man7.org/linux/man-pages/man1/find.1.html
+directories=$(find /home/$username/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
 
 # Iterate through the directories list variable
 for dir in ${directories[@]}; do
@@ -44,8 +49,8 @@ for dir in ${directories[@]}; do
     # If basename == bin, iterate through its files and create symbolic links 
     bin)
       # Check if bin directory exists, if not make it
-      if [[ ! -d /home/$1/bin ]]; then
-        mkdir /home/$1/bin
+      if [[ ! -d /home/$username/bin ]]; then
+        mkdir /home/$username/bin
       fi
 
       # Call header function to create nicer looking output
@@ -58,21 +63,21 @@ for dir in ${directories[@]}; do
         # ln command creates hard/symbolic links
         # -s option specifies to make a symbolic link from source to destination
         # -f option specifies that if the file exists at the source destination, then overwrite it with the link being made
-        ln -s $script /home/$1/bin && echo "Creating symbolic link for ${base}"
+        ln -sf $script /home/$username/bin && echo "Creating symbolic link for ${base}"
       done
       ;;
 
     # If basename == config, iterate through its subdirectories and create symbolic links in the ~/.config directory that point to the directories in ~/config_files/config directory 
     config)
-      # Check if bin directory exists, if not make it
-      if [[ ! -d /home/$1/.config ]]; then
-        mkdir /home/$1/.config
+      # Check if .config directory exists, if not make it
+      if [[ ! -d /home/$username/.config ]]; then
+        mkdir /home/$username/.config
       fi
 
       header $base
       for config_dir in $(find $dir -maxdepth 1 -mindepth 1); do
         base="${config_dir##*/}"
-        ln -s $config_dir /home/$1/.config && echo "Creating symbolic link for ${base}"
+        ln -sf $config_dir /home/$username/.config && echo "Creating symbolic link for ${base}"
       done
       ;;
 
@@ -81,7 +86,7 @@ for dir in ${directories[@]}; do
       header $base
       for file in $(find $dir -maxdepth 1 -mindepth 1); do
         base="${file##*/}"
-        ln -sf $file /home/$1/.$base && echo "Creating symbolic link for ${base}"
+        ln -sf $file /home/$username/.$base && echo "Creating symbolic link for ${base}"
       done
       ;;
 
