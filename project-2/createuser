@@ -190,7 +190,10 @@ fi
 # Loop through list of groups passed into the -g option and add the new user to those groups
 for group in ${varg[@]}; do
   # This line uses command substitution to store the line in /etc/groups that matches one of the groups specified in -g
-  group_line=$(grep "$group:" /etc/group)
+  # I make use of the regex '^' to specify that the grep pattern should start at the beginning of the line.
+  # I did this incase there were multiple groups with the matching patterns
+  # For example, groups 'bcit_school' and 'school' would have both matched without the '^'
+  group_line=$(grep "^$group:" /etc/group)
   # Checking if there are any users already part of this group
   # This is necessary to correctly format the way users are added to the group with commas
   # This is done by passing the output of the $group_line variable into awk and separating it into fields and extracting the 4th field which is where users that belong to the group are written
