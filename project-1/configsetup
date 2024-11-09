@@ -2,48 +2,75 @@
 
 # The purpose of this script is to clone a repository with existing configuration files and create symbolic links from the repository files to their intended locations
 
-# TODO: Check if bin directory exists first, if not make it 
-# NOTE: in-depth commenting, for example `base=${dir##*/}` needs to be explained like what is basename and what does it look like at this point of the script 
-# Explain why I used certain options for the find command
-# TODO: redo comments
-# TODO: maybe make a function to create the symbolic links
+# Function that echoes each config directory as a header in the output
+header() {
+  # Using the -e option for echo allows echo to interpret backslash escapes
+  # This let's me use `\n` to create a new line
+  echo -e "\n$1:"
+  echo ----------------------------------------
+}
 
-# Check if git is installed on the system
+# Check if git is installed on the system by checking if the git bin file exists
 if [[ -e /bin/git ]]; then
-# Clone existing configuration files from https://gitlab.com/cit2420/2420-as2-starting-filesin a directory called config_files
+# Clone existing configuration files from https://gitlab.com/cit2420/2420-as2-starting-filesin a directory called config_files in the user's home directory
   git clone https://gitlab.com/cit2420/2420-as2-starting-files /home/$1/config_files 
 else 
-  err": You need to install git to run this script"
+  err": You need to install git to run this script."
   exit 1
 fi
 
 # Get a list of full paths to directories in the cloned repository, excluding hidden directories
+# Using find command on the cloned config repository
+# -maxdepth option allows me to specify how many directories deep find will search through - a value of 1 will only look at the files in the first layer in the directory
+# -mindepth option does the opposite of -maxdepth - I use it here because find, by default, also outputs the directory being searched through. -mindepth 1 removes it
+# -type lets me specify to look for only specific types, in this case 'd' which standsfor directory
+# -not is an operator available to find which essentially means not equals an expression
+# -path "*/.*" is the expression I'm giving to -not
+# -path matches based on patterns - In this case, "*/.*" will match any thing before and after '/.' 
+# https://askubuntu.com/questions/266179/how-to-exclude-ignore-hidden-files-and-directories-in-a-wildcard-embedded-find
 directories=$(find /home/$1/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
 
-# Iterate through the directories variable
+# Iterate through the directories list variable
 for dir in ${directories[@]}; do
-
-  # Get the basename of each subdirectory found
+  # Get the basename of each subdirectory in directories list 
+  # Basenames are just the name of the last file or directory in a full path
+  # For example, '/home/arch/bin', the last file/directory is 'bin'
+  # https://devhints.io/bash <- where I found how to extract basename
   base="${dir##*/}"
 
   # Check the basename against cases defined below
   case "$base" in
 
-    # If basename == bin, iterate through the files and create symbolic links in ~/bin that point to the scripts in ~/config_files/bin directory
+    # If basename == bin, iterate through its files and create symbolic links 
     bin)
-      echo -e "\n$base:"
-      echo ---------------------------------
-      for script in $(find $dir -maxdepth 1 -mindepth 1 -type f); do
+      # Check if bin directory exists, if not make it
+      if [[ ! -d /home/$1/bin ]]; then
+        mkdir /home/$1/bin
+      fi
+
+      # Call header function to create nicer looking output
+      header $base
+
+      # Iterate through the files in ~/config_files/bin and create links for each of them in the user's ~/bin directory
+      for script in $(find $dir -maxdepth 1 -mindepth 1); do
         base="${script##*/}"
+
+        # ln command creates hard/symbolic links
+        # -s option specifies to make a symbolic link from source to destination
+        # -f option specifies that if the file exists at the source destination, then overwrite it with the link being made
         ln -s $script /home/$1/bin && echo "Creating symbolic link for ${base}"
       done
       ;;
 
     # If basename == config, iterate through its subdirectories and create symbolic links in the ~/.config directory that point to the directories in ~/config_files/config directory 
     config)
-      echo -e "\n$base:"
-      echo ---------------------------------
-      for config_dir in $(find $dir -maxdepth 1 -mindepth 1 -type d); do
+      # Check if bin directory exists, if not make it
+      if [[ ! -d /home/$1/.config ]]; then
+        mkdir /home/$1/.config
+      fi
+
+      header $base
+      for config_dir in $(find $dir -maxdepth 1 -mindepth 1); do
         base="${config_dir##*/}"
         ln -s $config_dir /home/$1/.config && echo "Creating symbolic link for ${base}"
       done
@@ -51,11 +78,10 @@ for dir in ${directories[@]}; do
 
     # If basename == home, iterate through the files and create symbolic links in the user's home directory that point to the files in ~/config_files/home directory
     home)
-      echo -e "\n$base:"
-      echo ---------------------------------
-      for file in $(find $dir -maxdepth 1 -mindepth 1 -type f); do
+      header $base
+      for file in $(find $dir -maxdepth 1 -mindepth 1); do
         base="${file##*/}"
-        ln -s $file /home/$1/.$base && echo "Creating symbolic link for ${base}"
+        ln -sf $file /home/$1/.$base && echo "Creating symbolic link for ${base}"
       done
       ;;
 
@@ -67,4 +93,5 @@ Edit script to accomodate it\n***"
   esac
 done
 
+echo
 echo "Configuration file setup complete"
