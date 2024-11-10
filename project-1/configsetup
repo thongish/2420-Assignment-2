@@ -10,7 +10,7 @@ username=$1
 header() {
   # Using the -e option for echo allows echo to interpret backslash escapes
   # This let's me use `\n` to create a new line
-  echo -e "\n$username:"
+  echo -e "\n$1:"
   echo ----------------------------------------
 }
 
