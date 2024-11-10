@@ -27,7 +27,7 @@ It is comprised of 4 different files:
 
 ### Usage:
 ```
-sudo ./setup <option(s)> <username>
+sudo ./setup <option(s)> 
 ```
 
 Available options:
@@ -39,7 +39,7 @@ Available options:
 ### Examples:
 ```
 sudo ./setup -h
-sudo ./setup -i my_user
+sudo ./setup -i 
 sudo ./setup -c my_user
 sudo ./setup -ic my_user
 sudo ./setup -c my_user -i
