@@ -33,6 +33,7 @@ sudo ./setup <option(s)> <username>
 Available options:
 - `-i` - Run the `packagesetup` script.
 - `-c` - Run the `configsetup` script.
+    - A username must be specified as an argument for `-c`
 - `-h` - Display information about the script and its options.
 
 ### Examples:
@@ -41,6 +42,7 @@ sudo ./setup -h
 sudo ./setup -i my_user
 sudo ./setup -c my_user
 sudo ./setup -ic my_user
+sudo ./setup -c my_user -i
 ```
 
 ## Project 2:
