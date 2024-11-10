@@ -9,7 +9,7 @@
 # https://askubuntu.com/questions/1279395/give-root-permissions-to-new-user
 if [[ ! $EUID == 0 ]]; then
   echo "ERROR: You must run this script with sudo privilege.
-Try 'sudo createuser -h' for more information."
+Try 'sudo ./createuser -h' for more information."
   exit 1
 fi
 
@@ -29,7 +29,7 @@ echo "$func_result"
 # Help menu variable
 helpmessage="
 COMMAND STRUCTURE:
-  sudo createuser [option(s)]... [username]
+  sudo ./createuser [option(s)]... [username]
 
 OPTIONS:
   -m    Create a user home directory at /home/[username]
@@ -41,7 +41,8 @@ OPTIONS:
   -h    Print the help menu
 
 EXAMPLE:
-  sudo createuser -m -s /bin/bash -g wheel,users my_user
+  sudo ./createuser my_user
+  sudo ./createuser -m -s /bin/bash -g wheel,users my_user
 "
 
 # Check if command run without any positional parameters or options by checking length of the first positional parameter
@@ -82,10 +83,13 @@ while getopts ":ms:g:h" opts; do
         # https://devhints.io/bash
         varg=(${OPTARG//,/ })
 
-        # Check if the groups exist in the /etc/group file
+        # Loop through each group given to the -g option and check whether it exists in the /etc/group file
         for group in ${varg[@]}; do
-          if [[ -z $(grep "$group:" /etc/group) ]]; then
-            echo "One or more groups specified do not exist on this system."
+          # I make use of the regex '^' to specify that the grep pattern should start at the beginning of the line.
+          # I did this incase there were multiple groups with the matching patterns
+          # For example, if I was just looking for the 'school' group, groups 'bcit_school' and 'school' would have both matched without the '^'
+          if [[ -z $(grep "^$group:" /etc/group) ]]; then
+            echo "$group group does not exist on this system."
             exit 1
           fi
         done
@@ -131,7 +135,7 @@ if [[ ! $checked_name == 0 ]]; then
 fi
 
 # Check if username already exists in the system
-if [[ -z $(grep "$1:" /etc/passwd) ]]; then
+if [[ -z $(grep "^$1:" /etc/passwd) ]]; then
   # Set first positional parameter as username
   username=$1
 else
@@ -144,6 +148,7 @@ home_dir="/home/$username"
 # If shell was specified, use that shell, otherwise use the default /usr/bin/bash
 # $vars is the shell path that was given as an argument to the -s getopts option
 if [[ -z $vars ]]; then
+  # Initializing shell variable which will be used later to add a user entry into /etc/passwd
   shell="/usr/bin/bash"
 else
   shell=$vars
@@ -153,13 +158,13 @@ fi
 # tail by default outputs the last 10 lines of a file - using the -n option let's us specify how many lines from the bottom of the file to output
 # awk is a tool that reads and manipulates plain text files - it separates lines of the file into "records" and each record is separated into "fields"
 # In this case, each record is an entry in the /etc/passwd or /etc/group file (a user/group in the system) and each field is the information about that user/group
-# The -F':' option in the awk command tells awk to separate fields by the colon symbol 
+# The -F':' option in the awk command tells awk to separate fields by the colon symbol which is perfect for lines in /etc/passwd
 # We can extract information from each field by using the variables $1, $2, $3 ... - $1 being the first field, $2 second, and so on
 # awk can also perform operations on the text that it extracts such as ++ and -- which increment or decrement a number
 # awk can also utilize control statements such as if-else statements - I check whether the UID/GID is less than 65534 (nobody ID)
 # sort is a command that sorts lines of a file or output - the -n option specifies a numeric sort
-# To sum it up, these next two lines read and output the 3rd field from each record in the /etc/passwd and /etc/group files as long as the 3rd field is less than 65534
-# That output is then sorted in ascending order and then piped into tail which outputs the highest ID number
+# To sum it up, these next two lines read and output the 3rd field (the uid and gid fields) from each record in the /etc/passwd and /etc/group files as long as the 3rd field is less than 65534 - the nobody user/group
+# That output is then sorted in ascending order and then piped into tail which outputs only the last line - the highest ID number
 # https://man7.org/linux/man-pages/man1/tail.1.html
 # https://man7.org/linux/man-pages/man1/awk.1p.html
 # https://www.geeksforgeeks.org/awk-command-unixlinux-examples/
@@ -168,6 +173,12 @@ uid=$(awk -F':' '{if ($3 < 65534) print ++$3}' /etc/passwd | sort -n | tail -n 1
 gid=$(awk -F':' '{if ($3 < 65534) print ++$3}' /etc/group | sort -n | tail -n 1)
 
 # Append user information into the /etc/passwd file using heredocs
+# heredocs feed a set of commands or lines of text into a program or command
+# In this case, the command is 'cat >> /etc/passwd' which just reads and appends into the file /etc/passwd
+# The list of commands or lines of text are within the two delimiters, in this case 'EOF'
+# The '<<-' is what is telling this whole thing to feed the text/commands between the delimiters into the 'cat >> /etc/passwd' command
+# The '-' in '<<-' is an option that will not read leading tabs inside the delimiters
+# https://tldp.org/LDP/abs/html/here-docs.html
 cat >> /etc/passwd <<- EOF
 $username:x:$uid:$gid::$home_dir:$shell
 EOF
@@ -180,9 +191,11 @@ EOF
 # Make the home directory if $make_home_dir variable == true - would be the case if the -m option was used
 if [[ $make_home_dir == true ]]; then
   mkdir $home_dir 
+  # Copy command using -r option which tells cp to copy recursively through the directories
   cp -r /etc/skel/* $home_dir
   # Change owner and permissions of the new home directory
   # the -R option tells the command to apply changes recursively
+  # https://tldp.org/LDP/sag/html/adduser.html
   chown -R $username:$username $home_dir
   chmod -R 700 $home_dir
 fi
@@ -190,9 +203,6 @@ fi
 # Loop through list of groups passed into the -g option and add the new user to those groups
 for group in ${varg[@]}; do
   # This line uses command substitution to store the line in /etc/groups that matches one of the groups specified in -g
-  # I make use of the regex '^' to specify that the grep pattern should start at the beginning of the line.
-  # I did this incase there were multiple groups with the matching patterns
-  # For example, groups 'bcit_school' and 'school' would have both matched without the '^'
   group_line=$(grep "^$group:" /etc/group)
   # Checking if there are any users already part of this group
   # This is necessary to correctly format the way users are added to the group with commas

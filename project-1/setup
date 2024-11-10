@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# The purpose of this script is to provide a single script that can be used to run either packagesetup or configsetup scripts or both
+# The purpose of this script is to provide a single script that can be used to run either packagesetup or configsetup scripts or both.
 
 # Checking if the environment variable EUID is not equal to 0, which is the root user's user ID (UID). If true, tell the user to use sudo
 # EUID stands for Effective User ID, it is essentially the user ID that will execute a process

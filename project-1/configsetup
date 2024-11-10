@@ -27,10 +27,11 @@ fi
 # Using find command on the cloned config repository
 # -maxdepth option allows me to specify how many directories deep find will search through - a value of 1 will only look at the files in the first layer in the directory
 # -mindepth option does the opposite of -maxdepth - I use it here because find, by default, also outputs the directory being searched through. -mindepth 1 removes it
-# -type lets me specify to look for only specific types, in this case 'd' which standsfor directory
+# -type lets me specify to look for only specific types of files, in this case, 'd', which stands for directory
 # -not is an operator available to find which essentially means not equals an expression
 # -path "*/.*" is the expression I'm giving to -not
 # -path matches based on patterns - In this case, "*/.*" will match any thing before and after '/.' 
+# So, find is going to match anything that is not equals "*/.*" - this avoids find finding any hidden files such as .git/
 # https://askubuntu.com/questions/266179/how-to-exclude-ignore-hidden-files-and-directories-in-a-wildcard-embedded-find
 # https://man7.org/linux/man-pages/man1/find.1.html
 directories=$(find /home/$username/config_files -maxdepth 1 -mindepth 1 -type d -not -path "*/.*")
@@ -38,8 +39,8 @@ directories=$(find /home/$username/config_files -maxdepth 1 -mindepth 1 -type d 
 # Iterate through the directories list variable
 for dir in ${directories[@]}; do
   # Get the basename of each subdirectory in directories list 
-  # Basenames are just the name of the last file or directory in a full path
-  # For example, '/home/arch/bin', the last file/directory is 'bin'
+  # Basenames are just the name of the last file or directory in a file's full path
+  # For example, '/home/arch/bin', the last file/directory in the path is 'bin'
   # https://devhints.io/bash <- where I found how to extract basename
   base="${dir##*/}"
 
@@ -48,7 +49,7 @@ for dir in ${directories[@]}; do
 
     # If basename == bin, iterate through its files and create symbolic links 
     bin)
-      # Check if bin directory exists, if not make it
+      # Check if bin directory exists - if not, make it
       if [[ ! -d /home/$username/bin ]]; then
         mkdir /home/$username/bin
       fi
@@ -58,6 +59,8 @@ for dir in ${directories[@]}; do
 
       # Iterate through the files in ~/config_files/bin and create links for each of them in the user's ~/bin directory
       for script in $(find $dir -maxdepth 1 -mindepth 1); do
+        # Again taking the basename of the path in the script variable in the for loop
+        # Script is the full path to a file inside the ~/config_files/bin directory at this point
         base="${script##*/}"
 
         # ln command creates hard/symbolic links
