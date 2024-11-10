@@ -19,11 +19,11 @@ After that, change directory into `project-1` or `project-2`, depending on which
 A set of scripts that automate the setup of a new Linux Distro installation by installing packages and setting up configuration files. 
 
 It is comprised of 4 different files:
-- `configsetup` - This is a script that clones an example dotfile repository from https://gitlab.com/cit2420/2420-as2-starting-files and creates the necessary directories and symbolic links.
-- `packagesetup` - This is a script that installs packages on Arch Linux systems using a user-defined list of packages in the `package-list` file.
-- `package-list` - This is a plain text file where you can define what packages you want the scripts to install.
+1. `configsetup` - This is a script that clones an example dotfile repository from https://gitlab.com/cit2420/2420-as2-starting-files and creates the necessary directories and symbolic links.
+2. `packagesetup` - This is a script that installs packages on Arch Linux systems using a user-defined list of packages in the `package-list` file.
+3. `package-list` - This is a plain text file where you can define what packages you want the scripts to install.
     - To add more packages to this to this file, open it in your text editor and insert the package name on a new line. 
-- `setup` - This is a script that can run either the configsetup or packagesetup scripts or both using options.
+4. `setup` - This is a script that can run either the configsetup or packagesetup scripts or both using options.
 
 ### Usage:
 ```
@@ -58,7 +58,7 @@ There are 4 options this script can handle:
 - `-s` - Allows you to specify a default shell for the new user.
 - `-g` - Allows you to specify additional group(s) the new user will belong to.
     - More than one group should be written by separating each group by a comma. 
-    - Example: `-s audio,wheel,users`
+    - Example: `-g audio,wheel,users`
 - `-h` - Display information about the script and its options.
 
 ### Examples:
