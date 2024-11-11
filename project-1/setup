@@ -34,7 +34,7 @@ EXAMPLE:
 # If no option was passed into the script, let the user know
 if [[ -z $1 ]]; then
   echo "ERROR: An option must be provided.
-Try 'setup -h' for a list of options."
+Try 'sudo ./setup -h' for a list of options."
   exit 1
 fi
 
@@ -55,14 +55,14 @@ while getopts ":ic:h" opt; do
     :)
       # This case is if an option that requires an argument doesn't receive any arguments
       echo "ERROR: -$OPTARG option requires an argument: username.
-Try 'setup -h' for more information."
+Try 'sudo ./setup -h' for more information."
       exit 1
 
       ;;
     *)
       # This case is for if user used an option that doesn't exist in the case statements
       echo "ERROR: No such option -$OPTARG.
-Try 'setup -h' for a list of options."
+Try 'sudo ./setup -h' for a list of options."
       exit 1
       ;;
   esac
